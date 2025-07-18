@@ -1,6 +1,6 @@
 # Crypto Price Fetcher
 
-A Node.js application built with TypeScript and Express to fetch cryptocurrency prices from multiple exchanges (e.g., Binance, Bybit) using the CCXT library.
+A Node.js application built with TypeScript and Express to fetch cryptocurrency prices for USDT pairs from multiple exchanges and compute price differences between them using the CCXT library.
 
 ## Project Structure
 
@@ -44,17 +44,54 @@ Edit `src/config/exchanges.ts` to add a new exchange:
 export const exchangeConfigs: ExchangeConfig[] = [
   { id: 'binance', name: 'Binance' },
   { id: 'bybit', name: 'Bybit' },
+  { id: 'mexc', name: 'MEXC' },
+  { id: 'gate', name: 'Gate.io' },
+  { id: 'bitget', name: 'Bitget' },
+  { id: 'okx', name: 'OKX' },
+  { id: 'bingx', name: 'BingX' },
   { id: 'kraken', name: 'Kraken', apiKey: 'YOUR_API_KEY', secret: 'YOUR_SECRET' },
 ];
 ```
 
+For exchanges requiring specific settings (e.g., Bybit spot market), add options:
+
+```typescript
+{ id: 'bybit', name: 'Bybit', options: { defaultType: 'spot' } }
+```
+
 ## API Endpoints
 
-- `GET /api/prices`: Returns the latest prices from all configured exchanges.
+- `GET /api/prices`: Returns the latest USDT pair prices from all configured exchanges.
+  ```json
+  {
+    "timestamp": "2025-07-18T16:04:45.123Z",
+    "prices": [
+      { "symbol": "BTC/USDT", "price": "65000.123", "exchange": "Binance", "timestamp": "2025-07-18T16:04:45.123Z" },
+      { "symbol": "BTC/USDT", "price": "64980.789", "exchange": "Bybit", "timestamp": "2025-07-18T16:04:45.123Z" },
+      ...
+    ]
+  }
+  ```
+- `GET /api/price-differences`: Returns price differences (absolute and percentage) for USDT pairs across all exchange pairs.
+  ```json
+  {
+    "timestamp": "2025-07-18T16:04:45.123Z",
+    "differences": [
+      {
+        "symbol": "BTC/USDT",
+        "exchangePair": "Binance vs Bybit",
+        "absoluteDifference": 19.334,
+        "percentageDifference": 0.0297
+      },
+      ...
+    ]
+  }
+  ```
 
 ## Notes
 
 - Prices are fetched every 5 minutes and stored in memory.
 - Logs are written to `logs/app.log` and the console.
-- The `ccxt` library handles rate limiting automatically.
-- For production, consider adding a database and caching layer.
+- The `ccxt` library handles rate limiting automatically. Monitor `logs/app.log` for rate limit or API errors.
+- For production, consider adding a database (e.g., MongoDB) for price persistence and a caching layer (e.g., Redis) to reduce API calls.
+- To fetch Bybit spot market pairs instead of futures, add `options: { defaultType: 'spot' }` to Bybit’s config in `src/config/exchanges.ts`.
