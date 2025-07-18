@@ -1,31 +1,35 @@
 import winston from 'winston';
 
+winston.addColors({
+  info: 'bold green',
+  warn: 'bold yellow',
+  error: 'bold red',
+  debug: 'bold blue',
+});
+
+const formatting = winston.format.combine(
+  winston.format.timestamp({
+    format: 'YYYY-MM-DD HH:mm:ss',
+  }),
+  winston.format.printf(({ level, message, timestamp }) => {
+    return `${timestamp} [${level.toUpperCase()}]: ${message}`;
+  }),
+);
+
 export const logger = winston.createLogger({
   level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.printf(({ timestamp, level, message }) => {
-      return `${timestamp} [${level.toUpperCase()}]: ${message}`;
-    }),
-  ),
   transports: [
     new winston.transports.Console({
       format: winston.format.combine(
+        formatting,
         winston.format.colorize({
-          level: true,
-          colors: {
-            info: 'blue',
-            warn: 'yellow',
-            error: 'red',
-            debug: 'green',
-          },
-        }),
-        winston.format.timestamp(),
-        winston.format.printf(({ timestamp, level, message }) => {
-          return `${timestamp} [${level.toUpperCase()}]: ${message}`;
+          all: true,
         }),
       ),
     }),
-    new winston.transports.File({ filename: 'logs/app.log' }),
+    new winston.transports.File({
+      filename: 'logs/app.log',
+      format: formatting,
+    }),
   ],
 });
