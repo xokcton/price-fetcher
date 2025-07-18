@@ -10,5 +10,19 @@ export interface ExchangeConfig {
   name: string;
   apiKey?: string;
   secret?: string;
+  options?: {
+    defaultType: string;
+  };
   // password?: string; // e.g., OKX passphrase
+}
+
+export interface PriceDifference {
+  symbol: string;
+  exchangePair: string; // e.g., "Binance vs Bybit"
+  absoluteDifference: number; // |price1 - price2|
+  percentageDifference: number; // |(price1 - price2) / price2 * 100|
+}
+
+export interface PriceMap {
+  [symbol: string]: CoinPrice[];
 }

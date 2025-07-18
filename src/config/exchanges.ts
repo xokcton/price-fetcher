@@ -2,7 +2,7 @@ import { ExchangeConfig } from '../interfaces';
 
 export const exchangeConfigs: ExchangeConfig[] = [
   { id: 'binance', name: 'Binance' },
-  { id: 'bybit', name: 'Bybit' },
+  { id: 'bybit', name: 'Bybit', options: { defaultType: 'spot' } },
   { id: 'mexc', name: 'MEXC' },
   { id: 'gate', name: 'Gate.io' },
   { id: 'bitget', name: 'Bitget' },
