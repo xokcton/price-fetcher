@@ -10,4 +10,5 @@ export interface ExchangeConfig {
   name: string;
   apiKey?: string;
   secret?: string;
+  // password?: string; // e.g., OKX passphrase
 }

@@ -46,12 +46,14 @@ async function fetchPricesFromExchange(
   try {
     await exchange.loadMarkets();
     const tickers = await exchange.fetchTickers();
-    return Object.entries(tickers).map(([symbol, ticker]: [string, Ticker]) => ({
-      symbol,
-      price: ticker.last?.toString() ?? 'N/A',
-      exchange: exchangeName,
-      timestamp: new Date(ticker.timestamp ?? Date.now()).toISOString(),
-    }));
+    return Object.entries(tickers)
+      .filter(([symbol]) => symbol.endsWith('/USDT') || symbol.endsWith('-USDT')) // Filter for USDT pairs only
+      .map(([symbol, ticker]: [string, Ticker]) => ({
+        symbol,
+        price: ticker.last?.toString() ?? 'N/A',
+        exchange: exchangeName,
+        timestamp: new Date(ticker.timestamp ?? Date.now()).toISOString(),
+      }));
   } catch (error) {
     logger.error(`Error fetching prices from ${exchangeName}:`, error);
     return [];
