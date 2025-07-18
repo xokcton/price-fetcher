@@ -21,13 +21,7 @@ A Node.js application built with TypeScript and Express to fetch cryptocurrency 
    npm install
    ```
 
-2. **Create the logs directory**:
-
-   ```bash
-   mkdir logs
-   ```
-
-3. **Run the application**:
+2. **Run the application**:
    ```bash
    npm start
    ```
@@ -91,7 +85,7 @@ For exchanges requiring specific settings (e.g., Bybit spot market), add options
 ## Notes
 
 - Prices are fetched every 5 minutes and stored in memory.
-- Logs are written to `logs/app.log` and the console.
+- Logs are written to `logs/app.log` and the console. The logs directory is automatically created on startup.
 - The `ccxt` library handles rate limiting automatically. Monitor `logs/app.log` for rate limit or API errors.
 - For production, consider adding a database (e.g., MongoDB) for price persistence and a caching layer (e.g., Redis) to reduce API calls.
 - To fetch Bybit spot market pairs instead of futures, add `options: { defaultType: 'spot' }` to Bybit’s config in `src/config/exchanges.ts`.

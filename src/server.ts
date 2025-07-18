@@ -1,9 +1,11 @@
 import app from './app';
+import { ensureLogsDirectory } from './utils/dirs';
 import { logger } from './utils/logger';
 
 const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
 app.listen(PORT, () => {
+  ensureLogsDirectory();
   logger.info(`Server running on port ${PORT}`);
 });
 
