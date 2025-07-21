@@ -66,16 +66,26 @@ For exchanges requiring specific settings (e.g., Bybit spot market), add options
     ]
   }
   ```
-- `GET /api/price-differences`: Returns price differences (absolute and percentage) for USDT pairs across all exchange pairs.
+- `GET /api/price-differences`: Returns the top 100 price differences (sorted by percentage difference in descending order) for USDT pairs across all exchange pairs, including the individual prices from each exchange. Uses a min-heap for efficient selection.
   ```json
   {
     "timestamp": "2025-07-18T16:04:45.123Z",
     "differences": [
       {
+        "symbol": "ETH/USDT",
+        "exchangePair": "MEXC vs OKX",
+        "absoluteDifference": 5.123,
+        "percentageDifference": 0.146,
+        "price1": "3500.456",
+        "price2": "3495.333"
+      },
+      {
         "symbol": "BTC/USDT",
         "exchangePair": "Binance vs Bybit",
         "absoluteDifference": 19.334,
-        "percentageDifference": 0.0297
+        "percentageDifference": 0.0297,
+        "price1": "65000.123",
+        "price2": "64980.789"
       },
       ...
     ]
@@ -85,7 +95,7 @@ For exchanges requiring specific settings (e.g., Bybit spot market), add options
 ## Notes
 
 - Prices are fetched every 5 minutes and stored in memory.
-- Logs are written to `logs/app.log` and the console. The logs directory is automatically created on startup.
+- Logs are written to `logs/app.log` and the console. The `logs` directory is automatically created on startup.
 - The `ccxt` library handles rate limiting automatically. Monitor `logs/app.log` for rate limit or API errors.
 - For production, consider adding a database (e.g., MongoDB) for price persistence and a caching layer (e.g., Redis) to reduce API calls.
 - To fetch Bybit spot market pairs instead of futures, add `options: { defaultType: 'spot' }` to Bybit’s config in `src/config/exchanges.ts`.
