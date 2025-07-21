@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { /*getPrices,*/ fetchAllPrices, getPriceDifferences } from '../services/exchangeService';
+import { /*getPrices,*/ fetchAllPrices } from '../services/exchangeService';
+import { getPriceDifferences } from '../services/priceService';
 import { logger } from '../utils/logger';
 
 export async function priceController(req: Request, res: Response) {

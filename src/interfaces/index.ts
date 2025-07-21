@@ -21,6 +21,8 @@ export interface PriceDifference {
   exchangePair: string; // e.g., "Binance vs Bybit"
   absoluteDifference: number; // |price1 - price2|
   percentageDifference: number; // |(price1 - price2) / price2 * 100|
+  price1: string;
+  price2: string;
 }
 
 export interface PriceMap {

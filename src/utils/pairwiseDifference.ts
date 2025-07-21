@@ -20,6 +20,8 @@ export function computePairwiseDifference(priceMap: PriceMap): PriceDifference[]
           exchangePair: `${prices[i].exchange} vs ${prices[j].exchange}`,
           absoluteDifference: parseFloat(absoluteDifference.toFixed(4)),
           percentageDifference: parseFloat(percentageDifference.toFixed(4)),
+          price1: prices[i].price,
+          price2: prices[j].price,
         });
       }
     }

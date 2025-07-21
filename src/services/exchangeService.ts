@@ -1,8 +1,7 @@
 import ccxt, { Exchange, Ticker } from 'ccxt';
 import { exchangeConfigs } from '../config/exchanges';
-import { CoinPrice, ExchangeConfig, PriceDifference, PriceMap } from '../interfaces';
+import { CoinPrice, ExchangeConfig } from '../interfaces';
 import { logger } from '../utils/logger';
-import { computePairwiseDifference } from '../utils/pairwiseDifference';
 
 class ExchangeFactory {
   private exchanges: Map<string, Exchange> = new Map();
@@ -93,21 +92,4 @@ export async function fetchAllPrices(): Promise<CoinPrice[]> {
   coinPrices = allPrices;
   logger.info(`Prices updated from all exchanges`);
   return coinPrices;
-}
-
-export async function getPriceDifferences(): Promise<PriceDifference[]> {
-  if (!coinPrices.length) return [];
-
-  // Group prices by normalized symbol
-  const priceMap: PriceMap = {};
-
-  for (const price of coinPrices) {
-    if (price.price === 'N/A') continue; // Skip invalid prices
-    if (!priceMap[price.symbol]) {
-      priceMap[price.symbol] = [];
-    }
-    priceMap[price.symbol].push(price);
-  }
-
-  return computePairwiseDifference(priceMap);
 }
