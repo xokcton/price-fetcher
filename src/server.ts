@@ -1,3 +1,7 @@
+import { config } from 'dotenv';
+
+config();
+
 import app from './app';
 import { ensureLogsDirectory } from './utils/dirs';
 import { logger } from './utils/logger';

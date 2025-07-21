@@ -2,9 +2,10 @@ import cron from 'node-cron';
 import { logger } from '../utils/logger';
 import { fetchAllPrices } from './exchangeService';
 
+const schedule = process.env.PRICE_FETCHING_SCHEDULE || '*/5 * * * *';
+
 export function startScheduler(): void {
-  // Schedule price fetching every 5 minutes
-  cron.schedule('*/5 * * * *', async () => {
+  cron.schedule(schedule, async () => {
     await fetchAllPrices();
   });
 

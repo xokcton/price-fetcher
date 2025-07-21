@@ -1,5 +1,5 @@
 import { PriceDifference, PriceMap } from '../interfaces';
-import { computePairwiseDifference } from '../utils/pairwiseDifference';
+import { computeNetProfit } from '../utils/difference';
 import { getPrices } from './exchangeService';
 
 export async function getPriceDifferences(): Promise<PriceDifference[]> {
@@ -17,5 +17,5 @@ export async function getPriceDifferences(): Promise<PriceDifference[]> {
     priceMap[price.symbol].push(price);
   }
 
-  return computePairwiseDifference(priceMap);
+  return computeNetProfit(priceMap);
 }

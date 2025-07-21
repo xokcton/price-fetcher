@@ -1,16 +1,20 @@
 import ccxt, { Exchange, Ticker } from 'ccxt';
 import { exchangeConfigs } from '../config/exchanges';
-import { CoinPrice, ExchangeConfig } from '../interfaces';
+import { defaultTakerFee, defaultWithdrawalFees } from '../config/fallbackFees';
+import { CoinPrice, ExchangeConfig, FeeStructure } from '../interfaces';
 import { logger } from '../utils/logger';
 
 class ExchangeFactory {
   private exchanges: Map<string, Exchange> = new Map();
+  private feeStructures: Map<string, FeeStructure> = new Map();
 
   constructor(configs: ExchangeConfig[]) {
     configs.forEach((config: ExchangeConfig) => {
       try {
         if (!ccxt.exchanges.includes(config.id)) {
-          logger.error(`Invalid exchange ID: ${config.id}`);
+          logger.error(
+            `Invalid exchange ID: ${config.id}. Supported exchanges: ${ccxt.exchanges.join(', ')}`,
+          );
           return;
         }
         // Type assertion to tell TypeScript that ccxt[config.id] is a valid Exchange constructor
@@ -18,14 +22,69 @@ class ExchangeFactory {
         const exchange = new ExchangeConstructor({
           apiKey: config.apiKey,
           secret: config.secret,
+          passphrase: config.passphrase,
           enableRateLimit: true,
-          ...config.options, // Add custom options
+          ...(config.options || {}), // Add custom options
         });
         this.exchanges.set(config.name, exchange);
+        this.loadFees(exchange, config.name);
       } catch (error) {
         logger.error(`Failed to initialize ${config.name}:`, error);
       }
     });
+  }
+
+  private async loadFees(exchange: Exchange, name: string): Promise<void> {
+    try {
+      await exchange.loadMarkets();
+      let tradingFees: { [symbol: string]: { taker: number } } = {};
+      let withdrawalFees: { [currency: string]: number } = {};
+
+      // Fetch trading fees via fetchTradingFees
+      try {
+        const fees = await exchange.fetchTradingFees();
+        tradingFees = Object.keys(fees).reduce((acc, symbol) => {
+          acc[symbol] = { taker: fees[symbol].taker || 0.001 }; // Default to 0.1% if unavailable
+          return acc;
+        }, {} as { [symbol: string]: { taker: number } });
+        logger.info(`Loaded trading fees for ${name} via fetchTradingFees`);
+      } catch (error) {
+        logger.warn(`Failed to fetch trading fees for ${name}: ${error}`);
+        // Fallback to hardcoded taker fees
+        const defaultTF = defaultTakerFee[name] || 0.001;
+        tradingFees = Object.keys(exchange.markets).reduce((acc, symbol) => {
+          acc[symbol] = { taker: defaultTF };
+          return acc;
+        }, {} as { [symbol: string]: { taker: number } });
+        logger.info(`Using fallback trading fee (${defaultTF * 100}%) for ${name}`);
+      }
+
+      // Fetch withdrawal fees via fetchCurrencies
+      try {
+        const currencies = await exchange.fetchCurrencies();
+        if (currencies) {
+          withdrawalFees = Object.keys(currencies).reduce((acc, currency) => {
+            const fee = currencies[currency]?.fee;
+            if (typeof fee === 'number' && !isNaN(fee)) {
+              acc[currency] = fee;
+            }
+            return acc;
+          }, {} as { [currency: string]: number });
+          logger.info(`Loaded withdrawal fees for ${name} via fetchCurrencies`);
+        } else {
+          throw new Error('No currencies data returned');
+        }
+      } catch (error) {
+        logger.warn(`Failed to fetch currencies for ${name}: ${error}`);
+        // Use fallback withdrawal fees from fallbackFees.ts
+        withdrawalFees = defaultWithdrawalFees[name] || defaultWithdrawalFees.default;
+        logger.info(`Using fallback withdrawal fees for ${name}`);
+      }
+
+      this.feeStructures.set(name, { tradingFees, withdrawalFees });
+    } catch (error) {
+      logger.error(`Failed to load fees for ${name}: ${error}`);
+    }
   }
 
   getExchange(name: string): Exchange | undefined {
@@ -35,9 +94,13 @@ class ExchangeFactory {
   getAllExchanges(): Map<string, Exchange> {
     return this.exchanges;
   }
+
+  getFeeStructure(name: string): FeeStructure | undefined {
+    return this.feeStructures.get(name);
+  }
 }
 
-const exchangeFactory = new ExchangeFactory(exchangeConfigs);
+export const exchangeFactory = new ExchangeFactory(exchangeConfigs);
 let coinPrices: CoinPrice[] = [];
 
 async function fetchPricesFromExchange(
