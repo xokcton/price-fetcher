@@ -43,3 +43,8 @@ export interface DefaultWithdrawalFee {
 export interface DefaultTakerFee {
   [exchange: string]: number;
 }
+
+export interface ComputeNetProfit {
+  differences: PriceDifference[];
+  total: number;
+}

@@ -1,0 +1,13 @@
+.mt-4.flex.justify-between.items-center
+  .flex.items-center
+    button#prev-page.p-2.bg-blue-500.text-white.rounded(disabled=page === 1) Previous
+    input#page-input(type='number', min='1', max=Math.ceil(total / (perPage === -1 ? total : perPage)), value=page, class='p-2.border.rounded.w-16.mx-2')
+    span.mx-2 of #{Math.ceil(total / (perPage === -1 ? total : perPage))}
+    button#next-page.p-2.bg-blue-500.text-white.rounded(disabled=page >= Math.ceil(total / (perPage === -1 ? total : perPage))) Next
+  select#per-page-select.p-2.border.rounded
+    option(value='5', selected=perPage === 5) 5 per page
+    option(value='10', selected=perPage === 10) 10 per page
+    option(value='15', selected=perPage === 15) 15 per page
+    option(value='20', selected=perPage === 20) 20 per page
+    option(value='25', selected=perPage === 25) 25 per page
+    option(value='-1', selected=perPage === -1) All

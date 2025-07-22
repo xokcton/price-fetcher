@@ -1,0 +1,18 @@
+th {
+  position: relative;
+}
+th.sorted-asc::after {
+  content: ' ↑';
+  position: absolute;
+}
+th.sorted-desc::after {
+  content: ' ↓';
+  position: absolute;
+}
+tr:hover {
+  background-color: #f1f5f9;
+}
+button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}

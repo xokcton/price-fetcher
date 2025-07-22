@@ -101,7 +101,7 @@ class ExchangeFactory {
 }
 
 export const exchangeFactory = new ExchangeFactory(exchangeConfigs);
-let coinPrices: CoinPrice[] = [];
+export let coinPrices: CoinPrice[] = [];
 
 async function fetchPricesFromExchange(
   exchange: Exchange,
@@ -142,11 +142,53 @@ async function fetchPricesFromExchange(
   }
 }
 
-export async function getPrices(): Promise<CoinPrice[]> {
-  return coinPrices;
+export async function getPrices(
+  sortBy: string = 'symbol',
+  sortOrder: string = 'asc',
+  page: number = 1,
+  perPage: number = 15,
+  search: string = '',
+): Promise<{ prices: CoinPrice[]; total: number }> {
+  let prices = [...coinPrices];
+
+  // Filter by search
+  if (search) {
+    const searchLower = search.toLowerCase();
+    prices = prices.filter(
+      (price) =>
+        price.symbol.toLowerCase().includes(searchLower) ||
+        price.exchange.toLowerCase().includes(searchLower),
+    );
+  }
+
+  const total = prices.length;
+
+  // Sort prices
+  prices.sort((a, b) => {
+    let aValue: string | number = a[sortBy as keyof CoinPrice] || '';
+    let bValue: string | number = b[sortBy as keyof CoinPrice] || '';
+    if (sortBy === 'price') {
+      aValue = parseFloat(aValue as string) || 0;
+      bValue = parseFloat(bValue as string) || 0;
+    } else {
+      aValue = (aValue as string).toLowerCase();
+      bValue = (bValue as string).toLowerCase();
+    }
+    if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Paginate
+  const start = (page - 1) * perPage;
+  const end = perPage === -1 ? prices.length : start + perPage;
+  prices = prices.slice(start, end);
+
+  logger.info(`Returning ${prices.length} prices after filtering '${search}'`);
+  return { prices, total };
 }
 
-export async function fetchAllPrices(): Promise<CoinPrice[]> {
+export async function fetchAllPrices(): Promise<void> {
   const allPrices: CoinPrice[] = [];
   for (const [name, exchange] of exchangeFactory.getAllExchanges()) {
     const prices = await fetchPricesFromExchange(exchange, name);
@@ -154,5 +196,4 @@ export async function fetchAllPrices(): Promise<CoinPrice[]> {
   }
   coinPrices = allPrices;
   logger.info(`Prices updated from all exchanges`);
-  return coinPrices;
 }

@@ -1,6 +1,6 @@
 # Crypto Price Fetcher
 
-A Node.js application built with TypeScript and Express to fetch cryptocurrency prices for USDT pairs from multiple exchanges and compute price differences between them using the CCXT library.
+A Node.js application built with TypeScript, Express, and Pug to fetch cryptocurrency prices for USDT pairs from multiple exchanges and compute price differences, using the CCXT library. Displays data in HTML tables with sorting, searching, and pagination capabilities.
 
 ## Project Structure
 
@@ -10,6 +10,9 @@ A Node.js application built with TypeScript and Express to fetch cryptocurrency 
 - `src/interfaces/`: TypeScript interfaces
 - `src/services/`: Business logic for exchange operations and scheduling
 - `src/utils/`: Utility functions (e.g., logging)
+- `src/views/`: Pug templates for HTML pages (`prices.pug`, `price-differences.pug`)
+- `src/views/partials/`: Reusable Pug templates (`head.pug`, `pagination.pug`)
+- `public/`: Static files (`js/table.js`, `css/styles.css`)
 - `src/app.ts`: Express app setup
 - `src/server.ts`: Server entry point
 
@@ -35,7 +38,7 @@ A Node.js application built with TypeScript and Express to fetch cryptocurrency 
      BINGX_API_KEY=your_bingx_api_key
      BINGX_SECRET=your_bingx_secret
      ```
-   - API keys are recommended for `fetchTradingFees()` for Binance, Bybit, Gate.io, OKX, and optionally Bitget and BingX. OKX requires a passphrase for authentication. Withdrawal fees use public `fetchCurrencies()`, so keys are optional for those.
+   - API keys are recommended for `fetchTradingFees()` for Binance, Bybit, Gate.io, OKX, and optionally Bitget and BingX. OKX requires a passphrase for authentication. Withdrawal fees use public `fetchCurrencies()`.
 
 2. **Install dependencies**:
 
@@ -114,89 +117,23 @@ For exchanges requiring specific settings (e.g., Bybit spot market), add options
 
 ## API Endpoints
 
-- `GET /api/prices`: Returns the latest USDT pair prices from all configured exchanges.
-  ```json
-  {
-    "timestamp": "2025-07-21T22:14:45.123Z",
-    "prices": [
-      { "symbol": "BTC/USDT", "price": "65000.123", "exchange": "Binance", "timestamp": "2025-07-21T22:14:45.123Z" },
-      { "symbol": "BTC/USDT", "price": "64980.789", "exchange": "Bybit", "timestamp": "2025-07-21T22:14:45.123Z" },
-      ...
-    ]
-  }
-  ```
-- `GET /api/price-differences`: Returns up to 100 price differences (by net profit) for USDT pairs across all exchange pairs, including only positive net profit opportunities, sorted by net profit descending. Includes individual prices, buying commission on the first exchange, selling commission on the second exchange, withdrawal fee from the first exchange, and net profit for arbitrage. Uses a min-heap for efficient selection.
-  ```json
-  {
-    "timestamp": "2025-07-21T22:14:45.123Z",
-    "differences": [
-      {
-        "symbol": "ETH/USDT",
-        "exchangePair": "MEXC vs OKX",
-        "absoluteDifference": 50.123,
-        "percentageDifference": 1.433,
-        "price1": "3550.456",
-        "price2": "3500.333",
-        "buyCommissionFirstExchange": 0.0,
-        "sellCommissionSecondExchange": 0.001,
-        "withdrawCommissionFirstExchange": 0.002,
-        "netProfit": 39.3702
-      },
-      {
-        "symbol": "BTC/USDT",
-        "exchangePair": "Binance vs Bybit",
-        "absoluteDifference": 200.334,
-        "percentageDifference": 0.308,
-        "price1": "65200.123",
-        "price2": "64999.789",
-        "buyCommissionFirstExchange": 0.001,
-        "sellCommissionSecondExchange": 0.001,
-        "withdrawCommissionFirstExchange": 0.0005,
-        "netProfit": 37.5340
-      },
-      {
-        "symbol": "ADA/USDT",
-        "exchangePair": "MEXC vs Bitget",
-        "absoluteDifference": 0.015,
-        "percentageDifference": 2.5,
-        "price1": "0.615",
-        "price2": "0.600",
-        "buyCommissionFirstExchange": 0.0,
-        "sellCommissionSecondExchange": 0.001,
-        "withdrawCommissionFirstExchange": 0.5,
-        "netProfit": 14.2640
-      },
-      ...
-    ]
-  }
-  ```
+- `GET /api/prices?sortBy=<symbol|exchange|price>&sortOrder=<asc|desc>&page=<number>&perPage=<5|10|15|20|25|-1>&search=<string>`: HTML table of prices, sortable, searchable, paginated.
+- `GET /api/price-differences?sortBy=<symbol|exchangePair|netProfit>&sortOrder=<asc|desc>&page=<number>&perPage=<5|10|15|20|25|-1>&search=<string>`: HTML table of price differences, sortable, searchable, paginated.
 
 ## Notes
 
-- Prices are fetched every N (e.g. 5) minutes and stored in memory.
-- Logs are written to `logs/app.log` and the console. The `logs` directory is automatically created on startup.
-- The `ccxt` library handles rate limiting automatically. Monitor `logs/app.log` for rate limit or API errors.
+- **HTML Tables**: Use Pug templates (`src/views/`) with reusable partials (`src/views/partials/head.pug`, `src/views/partials/pagination.pug`), Tailwind CSS (CDN), and vanilla JavaScript (`public/js/table.js`). Sorting and searching are server-side; pagination is client-assisted via URL updates.
+- **Sorting**: Click column headers to toggle ascending/descending. Query parameters: `sortBy` (symbol, exchange, etc.), `sortOrder` (asc, desc).
+- **Searching**: Case-insensitive, partial matches on Symbol or Exchange/Exchange Pair, server-side, debounced (300ms). Query parameter: `search`.
+- **Pagination**: Options: 5, 10, 15, 20, 25, All. Default: 15 per page. Use Previous/Next buttons, page number input, or dropdown.
+- **Navigation**: Links at the top of each page to switch between Prices and Price Differences, preserving `search` and `perPage` parameters.
+- Prices are fetched every 5 minutes (or change in `.env` file) and stored in memory.
+- Use `options: { defaultType: 'spot' }` for Bybit’s spot markets.
+- Logs are written to `logs/app.log`.
 - **Fee Handling**:
-  - **Trading Fees**: Fetched via CCXT’s `fetchTradingFees()`. If unavailable (e.g., due to `NotSupported` for BingX, OKX, MEXC, or `AuthenticationError` for Binance, Bybit, Gate.io, OKX), hardcoded fallback taker fees are used:
-    - BingX: 0.1%
-    - OKX: 0.1%
-    - MEXC: 0%
-    - Binance: 0.1%
-    - Bybit: 0.1%
-    - Gate.io: 0.2%
-    - Bitget: 0.1%
-    - Others: 0.1%
-  - **Withdrawal Fees**: Fetched via CCXT’s `fetchCurrencies()`. If unavailable, fallback fees from `src/config/fallbackFees.ts` are used for 100 coins, including BTC, ETH, USDT, XRP, ADA, SOL, BNB, DOT, DOGE, LINK, MATIC, LTC, BCH, XLM, TRX, SHIB, AVAX, UNI, ATOM, ALGO, VET, XMR, EOS, and others. Exchange-specific fees are:
-    - Binance: e.g., BTC (0.0005), ETH (0.005), USDT (2.5)
-    - Bybit: e.g., BTC (0.0005), ETH (0.005), USDT (3.0)
-    - MEXC: e.g., BTC (0.0003), ETH (0.002), USDT (1.0)
-    - Gate.io: e.g., BTC (0.0004), ETH (0.004), USDT (2.0)
-    - Bitget: e.g., BTC (0.0005), ETH (0.005), USDT (2.5)
-    - OKX: e.g., BTC (0.0004), ETH (0.003), USDT (1.5)
-    - BingX: e.g., BTC (0.0005), ETH (0.005), USDT (2.5)
-    - Others: e.g., BTC (0.0005), ETH (0.005), USDT (2.5)
-  - API keys are recommended for `fetchTradingFees()` for Binance, Bybit, Gate.io, OKX, and optionally Bitget and BingX. OKX requires a passphrase for authentication. Set keys and passphrase in `src/config/exchanges.ts` or a `.env` file. `fetchCurrencies()` is public and does not require keys.
-  - If fees are unavailable for a currency (e.g., not in `fetchCurrencies()` or `fallbackFees.ts`), `netProfit` may be `null`, and such differences are excluded from the output.
-- Net profit is calculated as `absoluteDifference - (price1 * buyCommissionFirstExchange + price2 * sellCommissionSecondExchange + withdrawCommissionFirstExchange * price1)`, representing the profit in USDT after fees for buying on the first exchange, selling on the second, and withdrawing the coin. Only differences with positive net profit are included, sorted by net profit descending.
-- For production, consider adding a database (e.g., MongoDB) for price persistence and a caching layer (e.g., Redis) to reduce API calls.
-- To fetch Bybit spot market pairs instead of futures, add `options: { defaultType: 'spot' }` to Bybit’s config in `src/config/exchanges.ts`.
+  - **Trading Fees**: Fetched via `fetchTradingFees()`. Fallbacks:
+    - BingX: 0.1%, OKX: 0.1%, MEXC: 0%, Binance: 0.1%, Bybit: 0.1%, Gate.io: 0.2%, Bitget: 0.1%, Others: 0.1%
+  - **Withdrawal Fees**: Fetched via `fetchCurrencies()`. Fallbacks in `fallbackFees.ts` for 100 coins (BTC, ETH, USDT, XRP, ADA, SOL, etc.).
+  - API keys recommended for `fetchTradingFees()`. OKX requires a passphrase.
+- Net profit: `absoluteDifference - (price1 * buyCommissionFirstExchange + price2 * sellCommissionSecondExchange + withdrawCommissionFirstExchange * price1)`.
+- For production, consider MongoDB for persistence and Redis for caching.

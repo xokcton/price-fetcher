@@ -1,9 +1,16 @@
 import MinHeap from 'heap-js';
-import { PriceDifference, PriceMap } from '../interfaces';
+import { ComputeNetProfit, PriceDifference, PriceMap } from '../interfaces';
 import { exchangeFactory } from '../services/exchangeService';
 import { logger } from './logger';
 
-export function computeNetProfit(priceMap: PriceMap): PriceDifference[] {
+export async function computeNetProfit(
+  priceMap: PriceMap,
+  sortBy: string,
+  sortOrder: string,
+  page: number,
+  perPage: number,
+  search: string,
+): Promise<ComputeNetProfit> {
   // Min-heap to maintain top 100 differences by netProfit
   const heap = new MinHeap<PriceDifference>((diff) => diff.netProfit ?? -Infinity);
   const maxHeapSize = 100;
@@ -73,14 +80,47 @@ export function computeNetProfit(priceMap: PriceMap): PriceDifference[] {
     }
   }
 
-  // Extract top differences, filter positive netProfit, and sort by netProfit descending
-  const topDifferences = heap
-    .toArray()
-    .filter((diff) => diff.netProfit !== null && diff.netProfit > 0)
-    .sort((a, b) => (b.netProfit ?? -Infinity) - (a.netProfit ?? -Infinity));
+  let differences = heap.toArray().filter((diff) => diff.netProfit !== null && diff.netProfit > 0);
+
+  // Filter by search
+  if (search) {
+    const searchLower = search.toLowerCase();
+    differences = differences.filter(
+      (diff) =>
+        diff.symbol.toLowerCase().includes(searchLower) ||
+        diff.exchangePair.toLowerCase().includes(searchLower),
+    );
+  }
+
+  const total = differences.length;
+
+  // Sort differences
+  differences.sort((a, b) => {
+    let aValue: string | number = a[sortBy as keyof PriceDifference] || '';
+    let bValue: string | number = b[sortBy as keyof PriceDifference] || '';
+    if (
+      sortBy === 'netProfit' ||
+      sortBy === 'absoluteDifference' ||
+      sortBy === 'percentageDifference'
+    ) {
+      aValue = aValue as number;
+      bValue = bValue as number;
+    } else {
+      aValue = (aValue as string).toLowerCase();
+      bValue = (bValue as string).toLowerCase();
+    }
+    if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Paginate
+  const start = (page - 1) * perPage;
+  const end = perPage === -1 ? differences.length : start + perPage;
+  differences = differences.slice(start, end);
 
   logger.info(
-    `Returning ${topDifferences.length} price differences with positive net profit, sorted by net profit descending`,
+    `Returning ${differences.length} price differences after filtering '${search}' with positive net profit, sorted by ${sortBy} ${sortOrder}`,
   );
-  return topDifferences;
+  return { differences, total };
 }
